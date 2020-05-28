@@ -59,6 +59,7 @@ private[spark] class SortShuffleWriter[K, V, C](
       new ExternalSorter[K, V, V](
         context, aggregator = None, Some(dep.partitioner), ordering = None, dep.serializer)
     }
+    // 准备些数据操作
     sorter.insertAll(records)
 
     // Don't bother including the time to open the merged output file in the shuffle write time,

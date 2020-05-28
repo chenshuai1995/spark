@@ -260,6 +260,7 @@ private[yarn] class YarnAllocator(
           numExecutorsStarting.get,
           allocateResponse.getAvailableResources))
 
+      // 处理资源
       handleAllocatedContainers(allocatedContainers.asScala)
     }
 
@@ -430,6 +431,7 @@ private[yarn] class YarnAllocator(
       }
     }
 
+    // 启动Container
     runAllocatedContainers(containersToUse)
 
     logInfo("Received %d containers from YARN, launching executors on %d of them."

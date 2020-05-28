@@ -118,6 +118,7 @@ private[spark] abstract class Task[T](
       Option(attemptNumber)).setCurrentContext()
 
     try {
+      // 启动任务:ShuffleMapTask
       runTask(context)
     } catch {
       case e: Throwable =>

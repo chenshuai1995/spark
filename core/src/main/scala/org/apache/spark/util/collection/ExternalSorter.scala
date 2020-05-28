@@ -192,6 +192,7 @@ private[spark] class ExternalSorter[K, V, C](
         addElementsRead()
         kv = records.next()
         map.changeValue((getPartition(kv._1), kv._1), update)
+        // 判断是否需要写数据
         maybeSpillCollection(usingMap = true)
       }
     } else {
@@ -219,6 +220,7 @@ private[spark] class ExternalSorter[K, V, C](
       }
     } else {
       estimatedSize = buffer.estimateSize()
+      // 判断是否需要写数据
       if (maybeSpill(buffer, estimatedSize)) {
         buffer = new PartitionedPairBuffer[K, C]
       }

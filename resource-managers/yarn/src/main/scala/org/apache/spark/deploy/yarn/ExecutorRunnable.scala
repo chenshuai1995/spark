@@ -59,6 +59,7 @@ private[yarn] class ExecutorRunnable(
 
   def run(): Unit = {
     logDebug("Starting Executor Container")
+    // 初始化nmClient用户与NodeManager之间通信
     nmClient = NMClient.createNMClient()
     nmClient.init(conf)
     nmClient.start()
@@ -95,8 +96,10 @@ private[yarn] class ExecutorRunnable(
     credentials.writeTokenStorageToStream(dob)
     ctx.setTokens(ByteBuffer.wrap(dob.getData()))
 
+    // 封装命令
     val commands = prepareCommand()
 
+    // 发送命令
     ctx.setCommands(commands.asJava)
     ctx.setApplicationACLs(
       YarnSparkHadoopUtil.getApplicationAclsForYarn(securityMgr).asJava)
@@ -119,6 +122,7 @@ private[yarn] class ExecutorRunnable(
 
     // Send the start request to the ContainerManager
     try {
+      // 启动container
       nmClient.startContainer(container.get, ctx)
     } catch {
       case ex: Exception =>

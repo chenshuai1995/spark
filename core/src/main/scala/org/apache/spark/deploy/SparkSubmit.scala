@@ -140,6 +140,7 @@ private[spark] class SparkSubmit extends Logging {
    */
   @tailrec
   private def submit(args: SparkSubmitArguments, uninitLog: Boolean): Unit = {
+    // 为提交应用准备环境
     val (childArgs, childClasspath, sparkConf, childMainClass) = prepareSubmitEnvironment(args)
 
     def doRunMain(): Unit = {
@@ -807,6 +808,9 @@ private[spark] class SparkSubmit extends Logging {
     var mainClass: Class[_] = null
 
     try {
+      // childMainClass = org.apache.spark.deploy.yarn.YarnClusterApplication
+      // 在resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/Client.scala文件中
+      // 底层还是通过org.apache.spark.deploy.yarn.Client这个类
       mainClass = Utils.classForName(childMainClass)
     } catch {
       case e: ClassNotFoundException =>

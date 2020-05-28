@@ -199,9 +199,13 @@ class SparkContext(config: SparkConf) extends Logging {
   private var _ui: Option[SparkUI] = None
   private var _hadoopConfiguration: Configuration = _
   private var _executorMemory: Int = _
+  // 通过ApplicationMaster申请资源，并不断从TaskScheduler中拿到合适的Task分发到Executor执行
   private var _schedulerBackend: SchedulerBackend = _
+  // 负责task级别的任务调度
   private var _taskScheduler: TaskScheduler = _
+  // 负责接收Executor的心跳信息，监控Executor的存活状况，并通知到TaskSchedule
   private var _heartbeatReceiver: RpcEndpointRef = _
+  // 负责stage级别的任务调度
   @volatile private var _dagScheduler: DAGScheduler = _
   private var _applicationId: String = _
   private var _applicationAttemptId: Option[String] = None

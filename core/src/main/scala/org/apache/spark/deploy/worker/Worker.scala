@@ -214,6 +214,7 @@ private[deploy] class Worker(
     webUi.bind()
 
     workerWebUiUrl = s"http://$publicAddress:${webUi.boundPort}"
+    // 向master注册
     registerWithMaster()
 
     metricsSystem.registerSource(workerSource)
@@ -251,6 +252,7 @@ private[deploy] class Worker(
           try {
             logInfo("Connecting to master " + masterAddress + "...")
             val masterEndpoint = rpcEnv.setupEndpointRef(masterAddress, Master.ENDPOINT_NAME)
+            // 向master发送注册消息
             sendRegisterMessageToMaster(masterEndpoint)
           } catch {
             case ie: InterruptedException => // Cancelled
@@ -360,6 +362,7 @@ private[deploy] class Worker(
     registrationRetryTimer match {
       case None =>
         registered = false
+        // 尝试向所有的master进行注册
         registerMasterFutures = tryRegisterAllMasters()
         connectionAttemptCount = 0
         registrationRetryTimer = Some(forwordMessageScheduler.scheduleAtFixedRate(
@@ -388,6 +391,7 @@ private[deploy] class Worker(
   }
 
   private def sendRegisterMessageToMaster(masterEndpoint: RpcEndpointRef): Unit = {
+    // worker向master发送RegisterWorker消息，进行注册worker
     masterEndpoint.send(RegisterWorker(
       workerId,
       host,
@@ -401,6 +405,7 @@ private[deploy] class Worker(
 
   private def handleRegisterResponse(msg: RegisterWorkerResponse): Unit = synchronized {
     msg match {
+      // worker注册成功
       case RegisteredWorker(masterRef, masterWebUiUrl, masterAddress) =>
         if (preferConfiguredMasterAddress) {
           logInfo("Successfully registered with master " + masterAddress.toSparkURL)
@@ -411,6 +416,7 @@ private[deploy] class Worker(
         changeMaster(masterRef, masterWebUiUrl, masterAddress)
         forwordMessageScheduler.scheduleAtFixedRate(new Runnable {
           override def run(): Unit = Utils.tryLogNonFatalError {
+            // worker注册成功后，给自己发送请求：给master发送心跳请求
             self.send(SendHeartbeat)
           }
         }, 0, HEARTBEAT_MILLIS, TimeUnit.MILLISECONDS)
@@ -429,6 +435,7 @@ private[deploy] class Worker(
         }
         masterRef.send(WorkerLatestState(workerId, execs.toList, drivers.keys.toSeq))
 
+      // worker收到master发送的注册worker失败消息
       case RegisterWorkerFailed(message) =>
         if (!registered) {
           logError("Worker registration failed: " + message)
@@ -442,9 +449,11 @@ private[deploy] class Worker(
 
   override def receive: PartialFunction[Any, Unit] = synchronized {
     case msg: RegisterWorkerResponse =>
+      // 处理注册结果的response
       handleRegisterResponse(msg)
 
     case SendHeartbeat =>
+      // 给master发送心跳
       if (connected) { sendToMaster(Heartbeat(workerId, self)) }
 
     case WorkDirCleanup =>
@@ -601,6 +610,7 @@ private[deploy] class Worker(
     case driverStateChanged @ DriverStateChanged(driverId, state, exception) =>
       handleDriverStateChanged(driverStateChanged)
 
+    // 向master注册消息
     case ReregisterWithMaster =>
       reregisterWithMaster()
 
@@ -760,12 +770,14 @@ private[deploy] object Worker extends Logging {
   val ENDPOINT_NAME = "Worker"
   private val SSL_NODE_LOCAL_CONFIG_PATTERN = """\-Dspark\.ssl\.useNodeLocalConf\=(.+)""".r
 
+  // 启动worker
   def main(argStrings: Array[String]) {
     Thread.setDefaultUncaughtExceptionHandler(new SparkUncaughtExceptionHandler(
       exitOnUncaughtException = false))
     Utils.initDaemon(log)
     val conf = new SparkConf
     val args = new WorkerArguments(argStrings, conf)
+    // 设置rpc环境并设置worker的endpoint
     val rpcEnv = startRpcEnvAndEndpoint(args.host, args.port, args.webUiPort, args.cores,
       args.memory, args.masters, args.workDir, conf = conf)
     // With external shuffle service enabled, if we request to launch multiple workers on one host,

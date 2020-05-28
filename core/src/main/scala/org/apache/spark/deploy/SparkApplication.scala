@@ -49,6 +49,7 @@ private[deploy] class JavaMainApplication(klass: Class[_]) extends SparkApplicat
       sys.props(k) = v
     }
 
+    // 反射调用yarn.Client的main方法
     mainMethod.invoke(null, args)
   }
 

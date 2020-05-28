@@ -32,7 +32,7 @@ private[spark] trait RpcEnvFactory {
  * An end point for the RPC that defines what functions to trigger given a message.
  *
  * It is guaranteed that `onStart`, `receive` and `onStop` will be called in sequence.
- *
+ * 调用顺序： onStart -> receive*(receive/receiveAndReply) -> onStop
  * The life-cycle of an endpoint is:
  *
  * {@code constructor -> onStart -> receive* -> onStop}

@@ -95,6 +95,7 @@ private[spark] abstract class Spillable[C](taskMemoryManager: TaskMemoryManager)
     if (shouldSpill) {
       _spillCount += 1
       logSpillage(currentMemory)
+      // 溢写操作，排序分区并溢写，写出一个文件
       spill(collection)
       _elementsRead = 0
       _memoryBytesSpilled += currentMemory

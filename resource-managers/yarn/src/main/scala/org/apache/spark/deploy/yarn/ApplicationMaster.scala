@@ -302,6 +302,7 @@ private[spark] class ApplicationMaster(args: ApplicationMasterArguments) extends
       }
 
       if (isClusterMode) {
+        // 如果是Cluster模式，开启Driver线程
         runDriver()
       } else {
         runExecutorLauncher()
@@ -447,6 +448,7 @@ private[spark] class ApplicationMaster(args: ApplicationMasterArguments) extends
     // the allocator is ready to service requests.
     rpcEnv.setupEndpoint("YarnAM", new AMEndpoint(rpcEnv, driverRef))
 
+    // 获取分配的资源：调用org.apache.spark.deploy.yarn.YarnAllocator
     allocator.allocateResources()
     val ms = MetricsSystem.createMetricsSystem("applicationMaster", sparkConf, securityMgr)
     val prefix = _sparkConf.get(YARN_METRICS_NAMESPACE).getOrElse(appId)
@@ -458,6 +460,7 @@ private[spark] class ApplicationMaster(args: ApplicationMasterArguments) extends
 
   private def runDriver(): Unit = {
     addAmIpFilter(None)
+    // 创建Driver线程并启动
     userClassThread = startUserApplication()
 
     // This a bit hacky, but we need to wait until the spark.driver.port property has
@@ -473,6 +476,7 @@ private[spark] class ApplicationMaster(args: ApplicationMasterArguments) extends
         val userConf = sc.getConf
         val host = userConf.get("spark.driver.host")
         val port = userConf.get("spark.driver.port").toInt
+        // 注册AM
         registerAM(host, port, userConf, sc.ui.map(_.webUrl))
 
         val driverRef = rpcEnv.setupEndpointRef(
@@ -665,6 +669,7 @@ private[spark] class ApplicationMaster(args: ApplicationMasterArguments) extends
       // TODO(davies): add R dependencies here
     }
 
+    // 通过反射获取用户类的main方法
     val mainMethod = userClassLoader.loadClass(args.userClass)
       .getMethod("main", classOf[Array[String]])
 
@@ -675,6 +680,7 @@ private[spark] class ApplicationMaster(args: ApplicationMasterArguments) extends
             logError(s"Could not find static main method in object ${args.userClass}")
             finish(FinalApplicationStatus.FAILED, ApplicationMaster.EXIT_EXCEPTION_USER_CLASS)
           } else {
+            // 调用用户类的main方法
             mainMethod.invoke(null, userArgs.toArray)
             finish(FinalApplicationStatus.SUCCEEDED, ApplicationMaster.EXIT_SUCCESS)
             logDebug("Done running user class")
@@ -793,6 +799,7 @@ object ApplicationMaster extends Logging {
   def main(args: Array[String]): Unit = {
     SignalUtils.registerLogger(log)
     val amArgs = new ApplicationMasterArguments(args)
+    // 创建ApplicationMaster并启动
     master = new ApplicationMaster(amArgs)
     System.exit(master.run())
   }

@@ -156,6 +156,7 @@ private[spark] class Client(
   def submitApplication(): ApplicationId = {
     var appId: ApplicationId = null
     try {
+      // 初始化并启动yarnClient
       launcherBackend.connect()
       yarnClient.init(hadoopConf)
       yarnClient.start()
@@ -175,11 +176,13 @@ private[spark] class Client(
       verifyClusterResources(newAppResponse)
 
       // Set up the appropriate contexts to launch our AM
+      // 创建AM并设置container
       val containerContext = createContainerLaunchContext(newAppResponse)
       val appContext = createApplicationSubmissionContext(newApp, containerContext)
 
       // Finally, submit and monitor the application
       logInfo(s"Submitting application $appId to ResourceManager")
+      // 最终提交应用
       yarnClient.submitApplication(appContext)
       launcherBackend.setAppId(appId.toString)
       reportLauncherState(SparkAppHandle.State.SUBMITTED)
@@ -939,6 +942,7 @@ private[spark] class Client(
     // For log4j configuration to reference
     javaOpts += ("-Dspark.yarn.app.container.log.dir=" + ApplicationConstants.LOG_DIR_EXPANSION_VAR)
 
+    // 获取用户类
     val userClass =
       if (isClusterMode) {
         Seq("--class", YarnSparkHadoopUtil.escapeForShell(args.userClass))
@@ -963,6 +967,7 @@ private[spark] class Client(
       } else {
         Nil
       }
+    // 获取AM类：org.apache.spark.deploy.yarn.ApplicationMaster
     val amClass =
       if (isClusterMode) {
         Utils.classForName("org.apache.spark.deploy.yarn.ApplicationMaster").getName
@@ -980,6 +985,7 @@ private[spark] class Client(
       Seq("--properties-file", buildPath(Environment.PWD.$$(), LOCALIZED_CONF_DIR, SPARK_CONF_FILE))
 
     // Command for the ApplicationMaster
+    // 封装命令
     val commands = prefixEnv ++
       Seq(Environment.JAVA_HOME.$$() + "/bin/java", "-server") ++
       javaOpts ++ amArgs ++
@@ -1131,6 +1137,7 @@ private[spark] class Client(
    * throw an appropriate SparkException.
    */
   def run(): Unit = {
+    // 提交应用
     this.appId = submitApplication()
     if (!launcherBackend.isConnected() && fireAndForget) {
       val report = getApplicationReport(appId)
@@ -1523,6 +1530,7 @@ private[spark] class YarnClusterApplication extends SparkApplication {
     conf.remove("spark.jars")
     conf.remove("spark.files")
 
+    // 启动yarn-client
     new Client(new ClientArguments(args), conf).run()
   }
 

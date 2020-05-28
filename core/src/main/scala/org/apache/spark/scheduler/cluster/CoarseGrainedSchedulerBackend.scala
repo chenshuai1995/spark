@@ -133,6 +133,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
         }
 
       case ReviveOffers =>
+        // 提交任务
         makeOffers()
 
       case KillTask(taskId, executorId, interruptThread, reason) =>
@@ -245,9 +246,11 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
             new WorkerOffer(id, executorData.executorHost, executorData.freeCores,
               Some(executorData.executorAddress.hostPort))
         }.toIndexedSeq
+        // 根据调度策略决定调度顺序
         scheduler.resourceOffers(workOffers)
       }
       if (!taskDescs.isEmpty) {
+        // 发送任务
         launchTasks(taskDescs)
       }
     }
@@ -446,6 +449,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
   }
 
   override def reviveOffers() {
+    // driver发送ReviveOffers消息
     driverEndpoint.send(ReviveOffers)
   }
 
